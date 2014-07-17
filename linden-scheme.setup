@@ -1,0 +1,9 @@
+;; linden-scheme.setup -*- scheme -*-
+
+(compile -d0 -O2 -J -s linden-scheme.scm)
+(compile -d0 -O2 -s linden-scheme.import.scm)
+
+(install-extension
+ 'linden-scheme
+ '("linden-scheme.so" "linden-scheme.import.so")
+ '((version "0.1.0")))

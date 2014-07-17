@@ -1,0 +1,8 @@
+;; linden-scheme.meta -*- scheme -*-
+
+((synopsis "Parametric 2L-systems")
+ (author "Alex Charlton")
+ (category graphics)
+ (license "BSD")
+ (depends)
+ (test-depends test))

@@ -90,13 +90,13 @@
         (flower 2))
       (step-l-system-times 6 (crocus)))
 
-
-(define-rule context-test (apex)
+;; TODO test branching context
+(define-rule (apex)
   (context
    (((stem len) * : (> len 2))
     '((leaf 1) (branch (leaf 1) (stem 1) (apex)) (stem 1) (apex)))
    (((stem len) *)
-    '((apex)))
+    #f)
    (else '((leaf 1) (stem 1) (apex)))))
 
 (define-l-system context-test (plant)

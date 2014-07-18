@@ -73,6 +73,9 @@
      (begin
        (hash-table-set! class-table 'class
                         (reverse (list 'default (quote superclasses) ...)))
+       (hash-table-update! rule-table 'class
+                           (lambda (table) table)
+                           (lambda () (make-hash-table)))
        (define (class)
          '(class (rule . args)))))))
 

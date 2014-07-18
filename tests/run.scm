@@ -1,12 +1,12 @@
 (use test linden-scheme)
 
-(define developemental-switch-time 3)
+(define developmental-switch-time 3)
 (define leaf-growth-limit 4)
 (define flower-growth-limit 2)
 
 (define-rule crocus (apex time)
   (cond
-     ((< time developemental-switch-time)
+     ((< time developmental-switch-time)
       `((stem 1)
         (branch (pitch -30) (leaf 0))
         (roll 138)

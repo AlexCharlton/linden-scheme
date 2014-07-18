@@ -99,16 +99,41 @@
     #f)
    (else '((leaf 1) (stem 1) (apex)))))
 
+(define-rule plant (leaf size)
+  (context
+   ((* (leaf s))
+    '((leaf 20)))
+   (else (cond
+          ((< size leaf-growth-limit)
+           `((leaf ,(add1 size))))))))
+
 (define-l-system context-test (plant)
   (apex))
 
-(test '(context-test
-        (leaf 4)
-        (stem 4)
-        (leaf 1)
-        (branch (leaf 1) (stem 1) (apex))
-        (stem 1)
-        (apex))
-      (step-l-system-times 4 (context-test)))
+(test '(context-test (leaf 4) (stem 4) (leaf 20)
+                     (branch (leaf 2) (stem 2) (apex))
+                     (stem 2) (apex))
+      (step-l-system-times 5 (context-test)))
+
+(test #t
+      (previous? '(leaf 1) 'leaf))
+
+(test #f
+      (previous? '(stem 1) 'leaf))
+
+(test #t
+      (next? '(leaf 1) 'leaf))
+
+(test #f
+      (next? '(stem 1) 'leaf))
+
+(test #t
+      (next? '((leaf 1) stem 3) 'leaf))
+
+(test #t
+      (next? '((stem 1) leaf 3) 'leaf))
+
+(test #f
+      (next? '((stem 1) leaf 3) 'flower))
 
 (test-exit)

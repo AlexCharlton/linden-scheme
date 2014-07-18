@@ -24,7 +24,7 @@
   (hash-table-set! (state) var (list default)))
 
 (define (get-state var)
-  (hash-table-ref (state) var))
+  (car (hash-table-ref (state) var)))
 
 (define (set-state var value)
   (hash-table-update! (state) var (lambda (v) (cons value (cdr v)))))
@@ -175,24 +175,48 @@
 
 
 ;; Context
+(define-for-syntax (get-context-parameter rule state elt)
+  (and state
+     (let loop ((state state))
+       (if (list? (car state))
+           (if (equal? (caar state) rule)
+               (list-ref (car state) elt)
+               (loop (cdr state)))
+           (list-ref state elt)))))
+
 (define-syntax bind-args*
   (syntax-rules ()
-    ((bind-args state vars () body . body-rest)
+    ((bind-args rule state () elts body . body-rest)
+     (begin body . body-rest))
+
+    ((bind-args rule state vars () body . body-rest)
      (syntax-error 'context "Too many parameters (limit is 16)" state))
 
-    ((bind-args state (var) (elt . rest-elts) body . body-rest)
-     (let ((var (and (list? (car state)) (list-ref (car state) elt))))
+    ((bind-args rule state (var) (elt . rest-elts) body . body-rest)
+     (let ((var (get-context-parameter rule state elt)))
        body . body-rest))
 
-    ((bind-args state (var . rest-vars) (elt . rest-elts) body . body-rest)
-     (let ((var (and (list? (car state)) (list-ref (car state) elt))))
-       (bind-args state rest-vars rest-elts body . body-rest)))))
+    ((bind-args rule state (var . rest-vars) (elt . rest-elts) body . body-rest)
+     (let ((var (get-context-parameter rule state elt)))
+       (bind-args rule state rest-vars rest-elts body . body-rest)))))
 
 (define-syntax bind-args
   (syntax-rules ()
-    ((bind-args state vars body . body-rest)
-     (bind-args* state vars (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+    ((bind-args rule state vars body . body-rest)
+     (bind-args* rule state vars (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
                  body . body-rest))))
+
+(define-for-syntax (next? next rule)
+  (and (list? next)
+     (let loop ((next next))
+       (if (list? (car next))
+           (if (equal? (caar next) rule)
+               #t
+               (loop (cdr next)))
+           (equal? (car next) rule)))))
+
+(define-for-syntax (previous? prev rule)
+  (and (list? prev) (equal? (car prev) rule)))
 
 (define-syntax context
   (syntax-rules (else * :)
@@ -203,96 +227,82 @@
     ;; Single clause
     ((context (((prev . prev-args) *) body . body-rest))
      (let ((previous (get-state 'previous)))
-       (when (and (list? (car previous))
-                (equal? (caar previous) 'prev))
-         (bind-args previous prev-args body . body-rest))))
+       (when (previous? previous 'prev)
+         (bind-args 'prev previous prev-args body . body-rest))))
 
     ((context ((* (nekst . next-args)) body . body-rest))
      (let ((next (get-state 'next)))
-       (when (and (list? (car next))
-                (equal? (caar next) 'nekst))
-         (bind-args next next-args body . body-rest))))
+       (when (next? next 'nekst)
+         (bind-args 'nekst next next-args body . body-rest))))
 
     ((context (((prev . prev-args) (nekst . next-args)) body . body-rest))
      (let ((next (get-state 'next))
            (previous (get-state 'previous)))
-       (when (and (list? (car next))
-                (list? (car previous))
-                (equal? (caar next) 'nekst)
-                (equal? (caar previous) 'prev))
-         (bind-args next next-args
-            (bind-args previous prev-args body . body-rest)))))
+       (when (and (next? next 'nekst)
+                (previous? previous 'prev))
+         (bind-args 'nekst next next-args
+            (bind-args 'prev previous prev-args body . body-rest)))))
 
     ;; Multiple clauses
     ((context (((prev . prev-args) *) body . body-rest) . cl)
      (let ((previous (get-state 'previous)))
-       (if (and (list? (car previous))
-              (equal? (caar previous) 'prev))
-           (bind-args previous prev-args body . body-rest)
+       (if (previous? previous 'prev)
+           (bind-args 'prev previous prev-args body . body-rest)
            (context . cl))))
 
     ((context ((* (nekst . next-args)) body . body-rest) . cl)
      (let ((next (get-state 'next)))
-       (if (and (list? (car next))
-              (equal? (caar next) 'nekst))
-           (bind-args next next-args body . body-rest)
+       (if (next? next 'nekst)
+           (bind-args 'nekst next next-args body . body-rest)
            (context . cl))))
 
     ((context (((prev . prev-args) (nekst . next-args)) body . body-rest) . cl)
      (let ((next (get-state 'next))
            (previous (get-state 'previous)))
-       (if (and (list? (car next))
-              (list? (car previous))
-              (equal? (caar next) 'nekst)
-              (equal? (caar previous) 'prev))
-           (bind-args next next-args
-             (bind-args previous prev-args body . body-rest))
+       (if (and (next? next 'nekst)
+              (previous? previous 'prev))
+           (bind-args 'nekst next next-args
+             (bind-args 'prev previous prev-args body . body-rest))
            (context . cl))))
 
     ;; Single clause with guard
     ((context (((prev . prev-args) * : test) body . body-rest))
      (let ((previous (get-state 'previous)))
-       (bind-args previous prev-args
-         (when (and (list? (car previous))
-                  (equal? (caar previous) 'prev)
+       (bind-args 'prev previous prev-args
+         (when (and (previous? previous 'prev)
                   test)
            body . body-rest))))
 
     ((context ((* (nekst . next-args) : test) body . body-rest))
      (let ((next (get-state 'next)))
-       (bind-args next next-args 
-         (when (and (list? (car next))
-                  (equal? (caar next) 'nekst)
+       (bind-args 'nekst next next-args 
+         (when (and (next? next 'nekst)
                   test)
            body . body-rest))))
 
     ((context (((prev . prev-args) (nekst . next-args) : test) body . body-rest))
      (let ((next (get-state 'next))
            (previous (get-state 'previous)))
-       (bind-args next next-args
-         (bind-args previous prev-args
-           (when (and (list? (car next))
-                    (list? (car previous))
-                    (equal? (caar next) 'nekst)
-                    (equal? (caar previous) 'prev)
+       (bind-args 'nekst next next-args
+         (bind-args 'prev previous prev-args
+           (when (and (next? next 'nekst)
+                    (previous? previous 'prev)
                     test)
              body . body-rest)))))
 
     ;; Multiple clauses with guard
     ((context (((prev . prev-args) * : test) body . body-rest) . cl)
      (let ((previous (get-state 'previous)))
-       (bind-args previous prev-args
-         (if (and (list? (car previous))
-                (equal? (caar previous) 'prev)
+       (bind-args 'prev previous prev-args
+         (if (and (previous? previous 'prev)
                 test)
              (begin body . body-rest)
              (context . cl)))))
 
     ((context ((* (nekst . next-args) : test) body . body-rest) . cl)
      (let ((next (get-state 'next)))
-       (bind-args next next-args
-         (if (and (list? (car next))
-                (equal? (caar next) 'nekst)
+       (bind-args 'nekst next next-args
+         (if (and (next? next 'nekst)
                 test)
              (begin body . body-rest)
              (context . cl)))))
@@ -300,13 +310,11 @@
     ((context (((prev . prev-args) (nekst . next-args) : test) body . body-rest) . cl)
      (let ((next (get-state 'next))
            (previous (get-state 'previous)))
-       (bind-args next next-args
-         (bind-args previous prev-args
-           (if (and (list? (car next))
-                  (list? (car previous))
-                  (equal? (caar next) 'nekst)
-                  (equal? (caar previous) 'prev)
-                  test)
+       (bind-args 'nekst next next-args
+         (bind-args 'prev previous prev-args
+           (if (and (next? next 'nekst)
+                    (previous? previous 'prev)
+                    test)
                (begin body . body-rest)
                (context . cl))))))))
 

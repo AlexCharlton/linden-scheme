@@ -17,17 +17,17 @@ None
     [macro] (define-render-rule [CLASS] (RULE-NAME [ARGS] ...) BODY ...)
 
 
-    [macro] (define-production CLASS (SUPER-CLASSES ...) (RULE [ARGS] ...))
+    [macro] (define-l-system CLASS (SUPER-CLASSES ...) (RULE [ARGS] ...))
 
 
-### Stepping and rendering productions
-    [procedure] (step-production PRODUCTION)
+### Stepping and rendering L-systems
+    [procedure] (step-l-system SYSTEM)
 
 
-    [procedure] (step-production-times N PRODUCTION)
+    [procedure] (step-l-system-times N SYSTEM)
 
 
-    [procedure] (render-production PRODUCTION)
+    [procedure] (render-l-system SYSTEM RENDER-TARGET)
 
 
 ### Macros
@@ -38,7 +38,7 @@ None
 
 
 ### Manipulating state
-While rendering L-systems, it is often desirable to track the state of a number of variables, following the branches in the production. Through this, one can implement any sort of turtle graphics system. linden-schemes provides this mechanism through the following three functions:
+While rendering L-systems, it is often desirable to track the state of a number of variables, following the branches in the L-system. Through this, one can implement any sort of turtle graphics system. linden-schemes provides this mechanism through the following three functions:
 
     [procedure] (define-state VAR DEFAULT)
 
@@ -54,7 +54,7 @@ Sets the value of the state variable `VAR` to `VALUE`. This is only useful when 
 
 
 ## Examples
-The following is an example of a production of a crocus taken from The Algorithmic Beauty of Plants [(Prusinkiewicz, Lindermayer. 1990)](http://algorithmicbotany.org/papers/abop/abop.pdf), section 3.1.3.
+The following is an example of a L-system of a crocus taken from The Algorithmic Beauty of Plants [(Prusinkiewicz, Lindermayer. 1990)](http://algorithmicbotany.org/papers/abop/abop.pdf), section 3.1.3.
 
 ``` scheme
 (use linden-scheme)
@@ -86,10 +86,10 @@ The following is an example of a production of a crocus taken from The Algorithm
      ((< size leaf-growth-limit)
       `((leaf ,(add1 size))))))
 
-(define-production crocus (plant)
+(define-l-system crocus (plant)
   (apex 1))
 
-(print (step-production (crocus)))
+(print (step-l-system (crocus)))
 ```
 
 ## Version history

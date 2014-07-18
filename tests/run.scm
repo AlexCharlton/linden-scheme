@@ -27,14 +27,14 @@
      ((< size leaf-growth-limit)
       `((leaf ,(add1 size))))))
 
-(define-production crocus (plant)
+(define-l-system crocus (plant)
   (apex 1))
 
 (test '(crocus (apex 1))
       (crocus))
 
 (test '(crocus (stem 1) (branch (pitch -30) (leaf 0)) (roll 138) (apex 2))
-      (step-production (crocus)))
+      (step-l-system (crocus)))
 
 (test '(crocus
         (stem 2)
@@ -44,7 +44,7 @@
         (branch (pitch -30) (leaf 0))
         (roll 138)
         (apex 3))
-      (step-production-times 2 (crocus)))
+      (step-l-system-times 2 (crocus)))
 
 (test '(crocus
         (stem 3)
@@ -55,7 +55,7 @@
         (roll 138)
         (stem 20)
         (flower 0))
-      (step-production-times 3 (crocus)))
+      (step-l-system-times 3 (crocus)))
 
 (test '(crocus
         (stem 4)
@@ -66,7 +66,7 @@
         (roll 138)
         (stem 20)
         (flower 1))
-      (step-production-times 4 (crocus)))
+      (step-l-system-times 4 (crocus)))
 
 (test '(crocus
         (stem 4)
@@ -77,7 +77,7 @@
         (roll 138)
         (stem 20)
         (flower 2))
-      (step-production-times 5 (crocus)))
+      (step-l-system-times 5 (crocus)))
 
 (test '(crocus
         (stem 4)
@@ -88,7 +88,7 @@
         (roll 138)
         (stem 20)
         (flower 2))
-      (step-production-times 6 (crocus)))
+      (step-l-system-times 6 (crocus)))
 
 
 (define-rule context-test (apex)
@@ -99,7 +99,7 @@
     '((apex)))
    (else '((leaf 1) (stem 1) (apex)))))
 
-(define-production context-test (plant)
+(define-l-system context-test (plant)
   (apex))
 
 (test '(context-test
@@ -109,6 +109,6 @@
         (branch (leaf 1) (stem 1) (apex))
         (stem 1)
         (apex))
-      (step-production-times 4 (context-test)))
+      (step-l-system-times 4 (context-test)))
 
 (test-exit)

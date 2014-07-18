@@ -4,10 +4,10 @@
     class-table
     define-render-rule
     render-rule-table
-    define-production
-    step-production
-    step-production-times
-    render-production
+    define-l-system
+    step-l-system
+    step-l-system-times
+    render-l-system
     define-state
     get-state
     set-state
@@ -41,6 +41,7 @@
 
 (define-state 'previous #f)
 (define-state 'next #f)
+(define-state 'render-target #f)
 
 
 ;;; Defining L-systems
@@ -50,7 +51,7 @@
 
 (define (get-rule* table class rule)
   (let* ((supers (or (hash-table-ref/default class-table class #f)
-                    (error 'get-rule "No such production" class)))
+                    (error 'get-rule "No such L-system" class)))
          (rules (hash-table-ref table class))
          (r (hash-table-ref/default rules rule #f)))
     (or r (let loop ((supers supers))
@@ -66,9 +67,9 @@
 (define (get-render-rule class rule)
   (get-rule* render-rule-table class rule))
 
-(define-syntax define-production
+(define-syntax define-l-system
   (syntax-rules ()
-    ((define-production class (superclasses ...) (rule . args))
+    ((define-l-system class (superclasses ...) (rule . args))
      (begin
        (hash-table-set! class-table 'class
                         (reverse (list 'default (quote superclasses) ...)))
@@ -108,64 +109,66 @@
               (list (cons rule args))))
         (list (cons rule args)))))
 
-(define (step-production production)
+(define (step-l-system system)
   (push-state)
-  (let ((class (car production))
-        (production (cdr production)))
-    (define (set-next p)
+  (let ((class (car system))
+        (system (cdr system)))
+    (define (set-next s)
       (set-state
        'next
-       (let recur ((p p))
+       (let recur ((s s))
          (cond
-          ((null? p)
+          ((null? s)
            #f)
-          ((not (list? (car p))) (error 'step-production "Malformed production"
-                                      production))
-          ((equal? (caar p) 'branch)
-           (cons (cadar p) (recur (cdr p))))
-          (else (car p))))))
-    (define (step p)
+          ((not (list? (car s))) (error 'step-l-system "Malformed L-system"
+                                      system))
+          ((equal? (caar s) 'branch)
+           (cons (cadar s) (recur (cdr s))))
+          (else (car s))))))
+    (define (step s)
       (cond
-       ((null? p)
+       ((null? s)
         (pop-state)
         '())
-       ((equal? (caar p) 'branch)
+       ((equal? (caar s) 'branch)
         (push-state)
-        (cons (cons 'branch (step (cdar p)))
-              (step (cdr p))))
+        (cons (cons 'branch (step (cdar s)))
+              (step (cdr s))))
        (else
-        (set-next (cdr p))
-        (let ((result (apply-rule class (caar p) (cdar p))))
-          (set-state 'previous (car p))
-          (append result (step (cdr p)))))))
-    (cons class (step production))))
+        (set-next (cdr s))
+        (let ((result (apply-rule class (caar s) (cdar s))))
+          (set-state 'previous (car s))
+          (append result (step (cdr s)))))))
+    (cons class (step system))))
 
-(define (step-production-times k production)
-  (let loop ((i k) (p production))
+(define (step-l-system-times k system)
+  (let loop ((i k) (s system))
     (if (zero? i)
-        p
-        (loop (sub1 i) (step-production p)))))
+        s
+        (loop (sub1 i) (step-l-system s)))))
 
-(define (render-production production)
+(define (render-l-system system render-target)
   (push-state)
-  (let ((class (car production))
-        (production (cdr production)))
-    (define (render p)
+  (set-state 'render-target render-target)
+  (let ((class (car system))
+        (system (cdr system)))
+    (define (render s)
       (cond
-       ((null? p)
+       ((null? s)
         (pop-state))
-       ((not (list? (car p))) (error 'render-production "Malformed production"
-                                   production))
-       ((equal? (caar p) 'branch)
+       ((not (list? (car s))) (error 'render-l-system "Malformed L-system"
+                                   system))
+       ((equal? (caar s) 'branch)
         (push-state)
-        (render (cdar p))
-        (render (cdr p)))
+        (render (cdar s))
+        (render (cdr s)))
        (else
-        (let ((r (get-render-rule class (caar p))))
+        (let ((r (get-render-rule class (caar s))))
           (when r
-            (apply r (cdar p))))
-        (render (cdr p)))))
-    (render production)))
+            (apply r (cdar s))))
+        (render (cdr s)))))
+    (render system))
+  render-target)
 
 
 ;; Context

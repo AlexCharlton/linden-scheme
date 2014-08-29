@@ -1,13 +1,15 @@
 # linden-scheme
 Parametric 2L-systems integrated with Scheme. The L-systems defined with this library take a significantly different form from the string-based L-systems described by Lindenmayer. linden-scheme uses a class-based system for defining L-systems.
 
+![Example tree](http://alex-charlton.com/static/images/linden-scheme-tree-example.png)
+
 ## Installation
 This repository is a [Chicken Scheme](http://call-cc.org/) egg.
 
 It is part of the [Chicken egg index](http://wiki.call-cc.org/chicken-projects/egg-index-4.html) and can be installed with `chicken-install linden-scheme`.
 
 ## Requirements
-None
+- gl-math
 
 ## Documentation
 ### Defining L-systems
@@ -17,7 +19,7 @@ L-systems in linden-scheme are comprised of two parts: L-systems and rules, whic
 
 Defines a rule similar to defining a function, but with an optional `CLASS`. If `CLASS` is omitted, the rule will be used if no more specific rules are defined – i.e. as a fallback rule. Multiple rules with the same `RULE-NAME` may be defined, provided they have different classes (otherwise the previous rule with the same name will be over-written).
 
-Rules should return a list of rules in `(RULE [ARGS] ...)` form. Any non-list value, when returned, will be treated as a no-op. In other words, when the rule is evaluated and a list is returned, the rule being evaluated in the current L-systems (by `step-l-system`) will be replaced by the given list of rules. If no list is provided, the rule being evaluated will remain the same.
+Rules should return a list of rules in `(RULE [ARGS] ...)` form. Any non-list value, when returned, will make evaluation of the rule treated as a no-op. In other words, when the rule is evaluated and a list is returned, the rule being evaluated in the current L-systems (by `step-l-system`) will be replaced by the given list of rules. If no list is provided, the rule being evaluated will remain the same.
 
 The special form `branch` may be included in the list of rules returned by a rule. `branch` should contain one or more rules. When `branch` is used, the state of the rules contained in the `branch` is split off from that of the parent of the `branch`.
 
@@ -30,7 +32,7 @@ For example, a list returned by a rule may look like:
 
 which describes a leaf, a branch (containing a leaf, stem, and apex), a stem, and an apex.
 
-When context-dependant or probabilistic rules are desired, see the macros `context` and `probability` in the section [Macros](#macros)
+When context-dependant or probabilistic rules are desired, see the macros `context` and `probability` in the section [Macros](#macros).
 
     [macro] (define-render-rule [CLASS] (RULE-NAME [ARGS] ...) BODY ...)
 
@@ -53,7 +55,7 @@ Performs `step-l-system` on the given `SYSTEM`, `N` times.
 
     [procedure] (render-l-system SYSTEM RENDER-TARGET)
 
-Evaluates each rule in the `SYSTEM`, in order, given their meanings defined by `define-render-rule`. Any rule that has not been defined by `define-render-rule` for the class or super-classes of the system is ignored. As with `step-l-system`, state is branched according to the `branch` statements in the system. The state variable `render-target` is set to `RENDER-TARGET` at the start of evaluation (see [Manipulating state](#manipulating-state)). `RENDER-TARGET` is returned.
+Evaluates each rule in the `SYSTEM`, in order, given their meanings defined by `define-render-rule`. Any rule that has not been defined by `define-render-rule` for the class or super-classes of the system is ignored. As with `step-l-system`, state is branched according to the `branch` statements in the system. The parameter `render-target` is set to `RENDER-TARGET` at the start of evaluation (see [Turtle graphics](#turtle-graphics)). The value of `render-target` is returned.
 
 ### Macros
     [macro] (context (TEST BODY ...) ...)
@@ -94,7 +96,7 @@ For example:
 describes a 10% chance of creating a branch with a flower, a 70% chance of doing nothing, and a 20% chance of creating two branches with flowers.
 
 ### Manipulating state
-While rendering L-systems, it is often desirable to track the state of a number of variables, following the branches in the L-system. In this manner, one can implement a turtle graphics system. linden-schemes provides this mechanism through the following three functions:
+While rendering L-systems, it is often desirable to track the state of a number of variables, following the branches in the L-system. In this manner, one can implement any type of turtle graphics system. linden-scheme provides this mechanism through the following three functions:
 
     [procedure] (define-state VAR DEFAULT)
 
@@ -107,6 +109,45 @@ Returns the value of the state variable `VAR`. This is only useful when called w
     [procedure] (set-state VAR VALUE)
 
 Sets the value of the state variable `VAR` to `VALUE`. This is only useful when called within a rule.
+
+### Turtle graphics
+linden-scheme provides a set of functions (often also render rules) that implement the standard turtle-graphics commands typically associated with graphical L-systems. These commands are intended to be a standard foundation for turtle graphics, but do not provide any graphical output mechanism themselves. Rather, they provide a convenient parameter for holding some sort of rendering target, as well as a set of procedures that are used to modify and access the usual geometric qualities: namely translation/rotation matrices and thickness. Two state variables are therefore defined for the turtle graphics system: `transform-matrix` and `thickness`, although facilities are provided so they do not need to be accessed through `get-state` or `set-state`.
+
+    [parameter] render-target
+
+Used to hold whatever the render rules are rendering to. Is set by `render-l-system`.
+
+    [procedure] (transform-matrix)
+
+Returns the current transformation matrix, as modified by calls to `pitch`, `roll`, `turn`, `move`, and `move-forward`. Also defined as a render rule.
+
+    [procedure] (pitch ANGLE)
+
+Transform the current transformation matrix by a rotation of `ANGLE` degrees around the x-axis. Also defined as a render rule.
+
+    [procedure] (roll ANGLE)
+
+Transform the current transformation matrix by a rotation of `ANGLE` degrees around the y-axis. Also defined as a render rule.
+
+    [procedure] (turn ANGLE)
+
+Transform the current transformation matrix by a rotation of `ANGLE` degrees around the z-axis. Also defined as a render rule.
+
+    [procedure] (move X Y Z)
+
+Transform the current transformation matrix by a translation of `(X Y Z)`. Also defined as a render rule.
+
+    [procedure] (move-forward DISTANCE)
+
+Transform the current transformation matrix by a translation of `(0 DISTANCE 0)`. Also defined as a render rule.
+
+    [procedure] (thickness [X])
+
+Given the value `X`, sets the state variable `thickness` to `X`. If `X` is omitted, the value of `thickness` is returned. Also defined as a render rule.
+
+    [procedure] (grow SCALE)
+
+Multiplies the value of the state variable `thickness` by `SCALE`. Also defined as a render rule.
 
 
 ## Examples
@@ -151,6 +192,8 @@ Note that three different classes (`crocus`, `plant`, and none) are used in this
             (print (step-l-system-times i (crocus))))
           (iota 5 1))
 ```
+
+For another, more visual example, see the [examples directory](https://github.com/AlexCharlton/linden-scheme/tree/master/examples).
 
 ## Version history
 ### Version 0.1.0

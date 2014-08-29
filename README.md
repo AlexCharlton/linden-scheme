@@ -36,7 +36,7 @@ When context-dependant or probabilistic rules are desired, see the macros `conte
 
     [macro] (define-render-rule [CLASS] (RULE-NAME [ARGS] ...) BODY ...)
 
-`define-render-rule` behaves much like `define-rule`, to be used for the rendering of an L-system. Render rules operate by side-effect only. The state variable `render-target` is provided to track the object that the L-system is rendering to. See `render-l-system` and [Manipulating state](#manipulating-state).
+`define-render-rule` behaves much like `define-rule`, to be used for the rendering of an L-system. Render rules operate by side-effect only. The parameter `render-target` is provided to track the object that the L-system is rendering to. See `render-l-system` and [Turtle graphics](#turtle-graphics).
 
     [macro] (define-l-system CLASS (SUPER-CLASSES ...) (RULE [ARGS] ...))
 
@@ -119,7 +119,7 @@ Used to hold whatever the render rules are rendering to. Is set by `render-l-sys
 
     [procedure] (transform-matrix)
 
-Returns the current transformation matrix, as modified by calls to `pitch`, `roll`, `turn`, `move`, and `move-forward`. Also defined as a render rule.
+Returns the current transformation matrix, as modified by calls to `pitch`, `roll`, `turn`, `move`, and `move-forward`.
 
     [procedure] (pitch ANGLE)
 

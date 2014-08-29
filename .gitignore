@@ -4,3 +4,4 @@
 *.o
 salmonella.log
 README.svnwiki
+/examples/tree

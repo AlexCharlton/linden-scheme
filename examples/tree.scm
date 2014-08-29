@@ -63,7 +63,7 @@
 
 (define-render-rule (stem length)
   (render-target
-   (cons (cylinder length (get-state 'thickness) (transform-matrix))
+   (cons (cylinder length (thickness) (transform-matrix))
          (render-target)))
   (move-forward length))
 

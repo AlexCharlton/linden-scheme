@@ -347,20 +347,25 @@
 
 ;;; Turtle graphics
 (define-state 'transform-matrix (mat4-identity))
-(define-state 'position '(0.0 0.0 0.0))
-(define-state 'pitch 0.0)
-(define-state 'roll 0.0)
-(define-state 'yaw 0.0)
 (define-state 'thickness 0.0)
+(define render-target (make-parameter #f))
 
-(define (thickness x)
-  (set-state 'thickness x))
+(define (transform-matrix)
+  (get-state 'transform-matrix))
+
+(define (thickness #!optional x)
+  (if x
+      (set-state 'thickness x)
+      (get-state 'thickness)))
 
 (define-render-rule (thickness x)
   (thickness x))
 
-(define-render-rule (grow x)
+(define (grow x)
   (thickness (* (get-state 'thickness) x)))
+
+(define-render-rule (grow x)
+  (grow x))
 
 (define (pitch angle)
   (set-state 'transform-matrix
@@ -386,14 +391,6 @@
 (define-render-rule (turn angle)
   (turn angle))
 
-(define (move-forward distance)
-  (set-state 'transform-matrix
-             (m* (get-state 'transform-matrix)
-                 (translation 0 distance 0))))
-
-(define-render-rule (move-forward distance)
-  (move-forward distance))
-
 (define (move x y z)
   (set-state 'transform-matrix
              (m* (get-state 'transform-matrix)
@@ -402,9 +399,11 @@
 (define-render-rule (move x y z)
   (move x y z))
 
-(define render-target (make-parameter #f))
+(define (move-forward distance)
+  (move 0 distance 0))
 
-(define (transform-matrix)
-  (get-state 'transform-matrix))
+(define-render-rule (move-forward distance)
+  (move-forward distance))
+
 
 ) ; end module linden-scheme

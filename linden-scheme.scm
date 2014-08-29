@@ -52,8 +52,8 @@
 (define (get-rule* table class rule)
   (let* ((supers (or (hash-table-ref/default class-table class #f)
                     (error 'get-rule "No such L-system" class)))
-         (rules (hash-table-ref table class))
-         (r (hash-table-ref/default rules rule #f)))
+         (rules (hash-table-ref/default table class #f))
+         (r (and rules (hash-table-ref/default rules rule #f))))
     (or r (let loop ((supers supers))
            (if (null? supers)
                #f

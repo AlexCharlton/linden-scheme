@@ -12,10 +12,19 @@
     get-state
     set-state
     context
-    probability)
+    probability
+    ;; Tutle graphics
+    pitch
+    roll
+    turn
+    thickness
+    move-forward
+    move
+    render-target
+    transform-matrix)
 
 (import chicken scheme)
-(use srfi-69 extras)
+(use srfi-69 extras gl-math)
 
 ;;; State
 (define state (make-parameter (make-hash-table)))
@@ -41,7 +50,6 @@
 
 (define-state 'previous #f)
 (define-state 'next #f)
-(define-state 'render-target #f)
 
 
 ;;; Defining L-systems
@@ -150,28 +158,28 @@
         s
         (loop (sub1 i) (step-l-system s)))))
 
-(define (render-l-system system render-target)
+(define (render-l-system system render-tgt)
   (push-state)
-  (set-state 'render-target render-target)
-  (let ((class (car system))
-        (system (cdr system)))
-    (define (render s)
-      (cond
-       ((null? s)
-        (pop-state))
-       ((not (list? (car s))) (error 'render-l-system "Malformed L-system"
-                                   system))
-       ((equal? (caar s) 'branch)
-        (push-state)
-        (render (cdar s))
-        (render (cdr s)))
-       (else
-        (let ((r (get-render-rule class (caar s))))
-          (when r
-            (apply r (cdar s))))
-        (render (cdr s)))))
-    (render system))
-  render-target)
+  (parameterize ((render-target render-tgt))
+    (let ((class (car system))
+          (system (cdr system)))
+      (define (render s)
+        (cond
+         ((null? s)
+          (pop-state))
+         ((not (list? (car s))) (error 'render-l-system "Malformed L-system"
+                                     system))
+         ((equal? (caar s) 'branch)
+          (push-state)
+          (render (cdar s))
+          (render (cdr s)))
+         (else
+          (let ((r (get-render-rule class (caar s))))
+            (when r
+              (apply r (cdar s))))
+          (render (cdr s)))))
+      (render system))
+    (render-target)))
 
 
 ;; Context
@@ -336,5 +344,67 @@
     ((probability clause . clauses)
      (let ((random-number (random 32768)))
        (probability* random-number 0 clause . clauses)))))
+
+;;; Turtle graphics
+(define-state 'transform-matrix (mat4-identity))
+(define-state 'position '(0.0 0.0 0.0))
+(define-state 'pitch 0.0)
+(define-state 'roll 0.0)
+(define-state 'yaw 0.0)
+(define-state 'thickness 0.0)
+
+(define (thickness x)
+  (set-state 'thickness x))
+
+(define-render-rule (thickness x)
+  (thickness x))
+
+(define-render-rule (grow x)
+  (thickness (* (get-state 'thickness) x)))
+
+(define (pitch angle)
+  (set-state 'transform-matrix
+             (m* (get-state 'transform-matrix)
+                 (x-rotation (degrees->radians angle)))))
+
+(define-render-rule (pitch angle)
+  (pitch angle))
+
+(define (roll angle)
+  (set-state 'transform-matrix
+             (m* (get-state 'transform-matrix)
+                 (y-rotation (degrees->radians angle)))))
+
+(define-render-rule (roll angle)
+  (roll angle))
+
+(define (turn angle)
+  (set-state 'transform-matrix
+             (m* (get-state 'transform-matrix)
+                 (z-rotation (degrees->radians angle)))))
+
+(define-render-rule (turn angle)
+  (turn angle))
+
+(define (move-forward distance)
+  (set-state 'transform-matrix
+             (m* (get-state 'transform-matrix)
+                 (translation 0 distance 0))))
+
+(define-render-rule (move-forward distance)
+  (move-forward distance))
+
+(define (move x y z)
+  (set-state 'transform-matrix
+             (m* (get-state 'transform-matrix)
+                 (translation x y z))))
+
+(define-render-rule (move x y z)
+  (move x y z))
+
+(define render-target (make-parameter #f))
+
+(define (transform-matrix)
+  (get-state 'transform-matrix))
 
 ) ; end module linden-scheme

@@ -4,5 +4,5 @@
  (author "Alex Charlton")
  (category graphics)
  (license "BSD")
- (depends)
+ (depends gl-math)
  (test-depends test))

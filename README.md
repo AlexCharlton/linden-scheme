@@ -151,7 +151,7 @@ Multiplies the value of the state variable `thickness` by `SCALE`. Also defined 
 
 
 ## Examples
-The following is an example of a L-system of a crocus taken from The Algorithmic Beauty of Plants [(Prusinkiewicz, Lindermayer. 1990)](http://algorithmicbotany.org/papers/abop/abop.pdf), section 3.1.3.
+The following is an example of a L-system of a crocus taken from *The Algorithmic Beauty of Plants* [(Prusinkiewicz, Lindermayer. 1990)](http://algorithmicbotany.org/papers/abop/abop.pdf), section 3.1.3.
 
 Note that three different classes (`crocus`, `plant`, and none) are used in this example. If, for example, a new rule `stem` were defined for the class `crocus`, it would be used over the `stem` rule that is defined for `plant`.
 
@@ -193,7 +193,7 @@ Note that three different classes (`crocus`, `plant`, and none) are used in this
           (iota 5 1))
 ```
 
-For another, more visual example, see the [examples directory](https://github.com/AlexCharlton/linden-scheme/tree/master/examples).
+For another, more visual example corresponding to the image at the top of this document, see the [examples directory](https://github.com/AlexCharlton/linden-scheme/tree/master/examples).
 
 ## Version history
 ### Version 0.1.0

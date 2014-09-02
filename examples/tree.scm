@@ -142,9 +142,9 @@
       (distance (+ (distance) (* (zoom) 0.05))))
    (let ([camera-x (* (distance) (sin (angle)))]
          [camera-z (* (distance) (cos (angle)))])
-     (view-matrix (look-at camera-x 2 camera-z
-                           0 2 0
-                           0 1 0)))
+     (view-matrix (look-at (make-point camera-x 2 camera-z)
+                           (make-point 0 2 0)
+                           (make-point 0 1 0))))
    (mvp (m* projection-matrix
             (view-matrix)
             (mvp))))

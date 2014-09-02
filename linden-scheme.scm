@@ -394,7 +394,7 @@
 (define (move x y z)
   (set-state 'transform-matrix
              (m* (get-state 'transform-matrix)
-                 (translation x y z))))
+                 (translation (make-point x y z)))))
 
 (define-render-rule (move x y z)
   (move x y z))

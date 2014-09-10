@@ -3,20 +3,60 @@
 ;;;; This example illustrates a simple tree L-system
 
 ;;;; NOTE:
-;;;; This file must be compiled.
-;;;; Since it uses glls-render, it must also be linked with OpenGL
+;;;; If this file is compiled, since it uses glls-render, it must also be linked with OpenGL
 ;;;; E.g.:
 ;;;; csc -lGL tree.scm
 
 ;;;; Use arrow keys to rotate, zoom camera.
 
-
+(module tree ()
 (import chicken scheme)
 (use linden-scheme
-     glls-render gl-math (prefix gl-utils gl:) gl-utils-srfi-4
+     glls-render gl-math gl-utils
      (prefix glfw3 glfw:) (prefix opengl-glew gl:)
-     random-mtzig)
-(include "mesh-tools")
+     srfi-1 srfi-42 random-mtzig)
+
+;;; Creating a cylinder
+(define (cylinder-mesh vertical-subdivisions resolution)
+  (let* ((angle-increment (/ (* 2 pi) resolution))
+         (height-increment (/ vertical-subdivisions))
+         (circle-points (map (lambda (angle)
+                               (list (cos angle) (sin angle)))
+                             (iota resolution 0 angle-increment)))
+         (vertices (append-ec (:range y 0 (* (add1 vertical-subdivisions)
+                                             height-increment)
+                                      height-increment)
+                              (: j resolution)
+                              (let ((circle-point (list-ref circle-points j)))
+                                (list (car circle-point)
+                                      y
+                                      (cadr circle-point)))))
+         (indices (append-ec (: i vertical-subdivisions)
+                             (: column resolution)
+                             (let* ((row (* i resolution))
+                                    (next-row (* (add1 i) resolution))
+                                    (next-column (if (= column (sub1 resolution))
+                                                     0
+                                                     (add1 column)))
+                                    (bottom-right (+ row column))
+                                    (bottom-left (+ row next-column))
+                                    (top-right (+ next-row column))
+                                    (top-left (+ next-row next-column)))
+                               (list bottom-left
+                                     bottom-right
+                                     top-right
+                                     bottom-left
+                                     top-right
+                                     top-left)))))
+    (make-mesh vertices: `(attributes: ((position #:float 3))
+                           initial-elements: ((position . ,vertices)))
+               indices: `(type: #:uint
+                          initial-elements: ,indices))))
+
+(define cylinder
+  (let ((mesh (cylinder-mesh 1 12)))
+    (lambda (length radius transform)
+      (cons mesh (m* transform (3d-scaling radius length radius))))))
 
 ;;; The l-system
 (define trunk-contraction-ratio 0.8)
@@ -72,36 +112,25 @@
 
 (define brown (f32vector 0.3 0.1 0.1))
 
-(define cylinder
-  (let ((mesh (cylinder-mesh 1 12)))
-    (lambda (length radius #!optional transform)
-      (make-mesh (mesh-vertex-data mesh)
-                 (mesh-index-data mesh)
-                 (if transform
-                     (m* transform (3d-scaling radius length radius))
-                     (3d-scaling radius length radius))))))
-
 (define-pipeline mesh-shader
-  ((#:vertex input: ((vertex #:vec3))
+  ((#:vertex input: ((position #:vec3))
              uniform: ((mvp #:mat4)))
    (define (main) #:void
-     (set! gl:position (* mvp (vec4 vertex 1.0)))))
+     (set! gl:position (* mvp (vec4 position 1.0)))))
   ((#:fragment uniform: ((color #:vec3))
                output: ((frag-color #:vec4)))
    (define (main) #:void
      (set! frag-color (vec4 color 1.0)))))
 
 (define (generate-tree)
-  (let* ((mesh (mesh-append (render-l-system (step-l-system-times 13 (tree)) '())))
-         (vao (gl:make-vao (mesh-vertex-data mesh) (mesh-index-data mesh)
-                           `((,(pipeline-attribute 'vertex mesh-shader) float: 3)))))
-    (a-tree (cons (make-mesh-shader-renderable
-                   n-elements: (u32vector-length (mesh-index-data mesh))
-                   element-type: (gl:type->gl-type uint:)
-                   vao: vao
-                   color: brown
-                   mvp: (mvp))
-                  mesh))))
+  (let* ((mesh (mesh-transform-append 'position
+                                      (render-l-system (step-l-system-times 13 (tree))
+                                                       '()))))
+    (mesh-attribute-locations-set! mesh (pipeline-mesh-attributes mesh-shader))
+    (mesh-make-vao! mesh)
+    (a-tree (make-mesh-shader-renderable mesh: mesh
+                                         color: brown
+                                         mvp: (mvp)))))
 
 ;;; Matrices
 (define projection-matrix (perspective 480 640 0.01 1000 70))
@@ -161,8 +190,10 @@
      (glfw:swap-buffers (glfw:window))
      (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))
      (update)
-     (render-mesh-shader (car (a-tree)))
-     (gl:check-error)
+     (render-mesh-shader (a-tree))
+     (check-error)
      (glfw:poll-events)
      (unless (glfw:window-should-close (glfw:window))
        (loop))))
+
+) ;end tree

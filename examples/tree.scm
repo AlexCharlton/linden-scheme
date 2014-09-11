@@ -126,8 +126,7 @@
   (let* ((mesh (mesh-transform-append 'position
                                       (render-l-system (step-l-system-times 13 (tree))
                                                        '()))))
-    (mesh-attribute-locations-set! mesh (pipeline-mesh-attributes mesh-shader))
-    (mesh-make-vao! mesh)
+    (mesh-make-vao! mesh (pipeline-mesh-attributes mesh-shader))
     (a-tree (make-mesh-shader-renderable mesh: mesh
                                          color: brown
                                          mvp: (mvp)))))

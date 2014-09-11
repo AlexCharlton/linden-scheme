@@ -6,4 +6,4 @@
 (install-extension
  'linden-scheme
  '("linden-scheme.so" "linden-scheme.import.so")
- '((version "0.1.2")))
+ '((version "0.1.3")))

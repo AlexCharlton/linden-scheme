@@ -14,7 +14,7 @@
 (use linden-scheme
      glls-render gl-math gl-utils
      (prefix glfw3 glfw:) (prefix opengl-glew gl:)
-     srfi-1 srfi-42 random-mtzig)
+     srfi-1 srfi-4 srfi-42 random-mtzig)
 
 ;;; Creating a cylinder
 (define (cylinder-mesh vertical-subdivisions resolution)
@@ -134,7 +134,7 @@
 ;;; Matrices
 (define projection-matrix (perspective 480 640 0.01 1000 70))
 (define view-matrix (make-parameter #f))
-(define mvp (make-parameter (make-f32vector 16)))
+(define mvp (make-parameter (make-f32vector 16 #f #t)))
 
 ;;; Camera movement
 (define pan (make-parameter 0))

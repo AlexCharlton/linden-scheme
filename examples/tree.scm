@@ -2,61 +2,17 @@
 
 ;;;; This example illustrates a simple tree L-system
 
-;;;; NOTE:
-;;;; If this file is compiled, since it uses glls-render, it must also be linked with OpenGL
-;;;; E.g.:
-;;;; csc -lGL tree.scm
-
 ;;;; Use arrow keys to rotate, zoom camera.
 
 (module tree ()
 (import chicken scheme)
-(use linden-scheme
-     glls-render gl-math gl-utils
-     (prefix glfw3 glfw:) (prefix opengl-glew gl:)
-     srfi-1 srfi-4 srfi-42 random-mtzig)
-
-;;; Creating a cylinder
-(define (cylinder-mesh vertical-subdivisions resolution)
-  (let* ((angle-increment (/ (* 2 pi) resolution))
-         (height-increment (/ vertical-subdivisions))
-         (circle-points (map (lambda (angle)
-                               (list (cos angle) (sin angle)))
-                             (iota resolution 0 angle-increment)))
-         (vertices (append-ec (:range y 0 (* (add1 vertical-subdivisions)
-                                             height-increment)
-                                      height-increment)
-                              (: j resolution)
-                              (let ((circle-point (list-ref circle-points j)))
-                                (list (car circle-point)
-                                      y
-                                      (cadr circle-point)))))
-         (indices (append-ec (: i vertical-subdivisions)
-                             (: column resolution)
-                             (let* ((row (* i resolution))
-                                    (next-row (* (add1 i) resolution))
-                                    (next-column (if (= column (sub1 resolution))
-                                                     0
-                                                     (add1 column)))
-                                    (bottom-right (+ row column))
-                                    (bottom-left (+ row next-column))
-                                    (top-right (+ next-row column))
-                                    (top-left (+ next-row next-column)))
-                               (list bottom-left
-                                     bottom-right
-                                     top-right
-                                     bottom-left
-                                     top-right
-                                     top-left)))))
-    (make-mesh vertices: `(attributes: ((position #:float 3))
-                           initial-elements: ((position . ,vertices)))
-               indices: `(type: #:uint
-                          initial-elements: ,indices))))
+(use linden-scheme hypergiant)
 
 (define cylinder
-  (let ((mesh (cylinder-mesh 1 12)))
+  (let ((mesh (cylinder-mesh 1 1 1 12 index-type: #:uint)))
     (lambda (length radius transform)
       (cons mesh (m* transform (3d-scaling radius length radius))))))
+
 
 ;;; The l-system
 (define trunk-contraction-ratio 0.8)
@@ -66,13 +22,6 @@
 (define divergance-angle 137.5)
 (define width-decrease-rate 0.707)
 (thickness 0.1)
-
-(define random-state (random-mtzig:init))
-
-(define (random-normal #!optional mean variance)
-  (+ mean
-     (* (random-mtzig:randn! random-state)
-        variance)))
 
 (define-rule tree (apex l)
   `((stem ,l)
@@ -107,92 +56,50 @@
          (render-target)))
   (move-forward length))
 
-;;; Rendering a tree
-(define a-tree (make-parameter #f))
 
-(define brown (f32vector 0.3 0.1 0.1))
-
-(define-pipeline mesh-shader
-  ((#:vertex input: ((position #:vec3))
-             uniform: ((mvp #:mat4)))
-   (define (main) #:void
-     (set! gl:position (* mvp (vec4 position 1.0)))))
-  ((#:fragment uniform: ((color #:vec3))
-               output: ((frag-color #:vec4)))
-   (define (main) #:void
-     (set! frag-color (vec4 color 1.0)))))
-
-(define (generate-tree)
-  (let* ((mesh (mesh-transform-append 'position
-                                      (render-l-system (step-l-system-times 13 (tree))
-                                                       '()))))
-    (mesh-make-vao! mesh (pipeline-mesh-attributes mesh-shader))
-    (a-tree (make-mesh-shader-renderable mesh: mesh
-                                         color: brown
-                                         mvp: (mvp)))))
-
-;;; Matrices
-(define projection-matrix (perspective 480 640 0.01 1000 70))
-(define view-matrix (make-parameter #f))
-(define mvp (make-parameter (make-f32vector 16 #f #t)))
-
-;;; Camera movement
+;;; Camera
+(define scene (make-parameter #f))
+(define camera (make-parameter #f))
 (define pan (make-parameter 0))
+(define tilt (make-parameter 0))
 (define zoom (make-parameter 0))
-(define distance (make-parameter 4))
-(define angle (make-parameter 0))
+(define c-roll (make-parameter 0))
 
-(glfw:key-callback
- (lambda (window key scancode action mods)
-   (cond
-    [(and (eq? key glfw:+key-escape+) (eq? action glfw:+press+))
-     (glfw:set-window-should-close window 1)]
-    [(and (eq? key glfw:+key-left+) (eq? action glfw:+press+))
-     (pan (sub1 (pan)))]
-    [(and (eq? key glfw:+key-right+) (eq? action glfw:+press+))
-     (pan (add1 (pan)))]
-    [(and (eq? key glfw:+key-left+) (eq? action glfw:+release+))
-     (pan (add1 (pan)))]
-    [(and (eq? key glfw:+key-right+) (eq? action glfw:+release+))
-     (pan (sub1 (pan)))]
-    [(and (eq? key glfw:+key-up+) (eq? action glfw:+press+))
-     (zoom (sub1 (zoom)))]
-    [(and (eq? key glfw:+key-down+) (eq? action glfw:+press+))
-     (zoom (add1 (zoom)))]
-    [(and (eq? key glfw:+key-up+) (eq? action glfw:+release+))
-     (zoom (add1 (zoom)))]
-    [(and (eq? key glfw:+key-down+) (eq? action glfw:+release+))
-     (zoom (sub1 (zoom)))])))
+(define keys (make-bindings
+              `((quit ,+key-escape+ press: ,stop)
+                (tilt-up ,+key-up+ toggle: ,tilt)
+                (tilt-down ,+key-down+ reverse-toggle: ,tilt)
+                (zoom-in ,+key-up+ mods: (,+mod-shift+) reverse-toggle: ,zoom)
+                (zoom-out ,+key-down+ mods: (,+mod-shift+) toggle: ,zoom)
+                (pan-right ,+key-right+ toggle: ,pan)
+                (pan-left ,+key-left+ reverse-toggle: ,pan)
+                (roll-right ,+key-right+ mods: (,+mod-shift+) reverse-toggle: ,c-roll)
+                (roll-left ,+key-left+ mods: (,+mod-shift+) toggle: ,c-roll))))
 
-(define (update)
-  (angle (+ (angle) (/ (pan) 30)))
-  (if (positive? (+ (distance) (* (zoom) 0.005)))
-      (distance (+ (distance) (* (zoom) 0.05))))
-   (let ([camera-x (* (distance) (sin (angle)))]
-         [camera-z (* (distance) (cos (angle)))])
-     (view-matrix (look-at (make-point camera-x 2 camera-z)
-                           (make-point 0 2 0)
-                           (make-point 0 1 0))))
-   (mvp (m* projection-matrix
-            (view-matrix)
-            (mvp))))
+(define (update delta)
+  (yaw-camera! (camera) (/ (pan) 30))
+  (pitch-camera! (camera) (/ (tilt) 30))
+  (roll-camera! (camera) (/ (c-roll) 30))
+  (zoom-camera! (camera) (/ (zoom) 10)))
 
-;;; Initialize and main loop
-(glfw:with-window (480 640 "A tree" resizable: #f)
-   (gl:init)
-   (gl:enable gl:+depth-test+)
-   (gl:depth-func gl:+less+)
-   (gl:clear-color 0.9 0.9 1.0 1)
-   (compile-pipelines)
-   (generate-tree)
-   (let loop ()
-     (glfw:swap-buffers (glfw:window))
-     (gl:clear (bitwise-ior gl:+color-buffer-bit+ gl:+depth-buffer-bit+))
-     (update)
-     (render-mesh-shader (a-tree))
-     (check-error)
-     (glfw:poll-events)
-     (unless (glfw:window-should-close (glfw:window))
-       (loop))))
+(define a-tree (make-parameter #f))
+(define brown (make-rgb-color 0.3 0.1 0.1))
+
+(define (init)
+  (push-key-bindings keys)
+  (gl:clear-color 0.9 0.9 1.0 1)
+  (scene (make-scene))
+  (camera (make-camera #:perspective #:orbit (scene)))
+  (camera-look-at! (camera) (make-point 0 0 0))
+  (set-camera-zoom! (camera) 4)
+  (a-tree (mesh-transform-append 'position
+                                 (render-l-system (step-l-system-times 13 (tree))
+                                                  '())))
+  (add-node (scene) mesh-pipeline-render-pipeline
+            mesh: (a-tree)
+            color: brown
+            position: (make-point 0 -2 0)))
+
+(start 640 480 "A tree" resizable: #f init: init update: update)
 
 ) ;end tree

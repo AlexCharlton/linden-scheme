@@ -200,6 +200,11 @@ Note that three different classes (`crocus`, `plant`, and none) are used in this
 For another, more visual example corresponding to the image at the top of this document, see the [examples directory](https://github.com/AlexCharlton/linden-scheme/tree/master/examples).
 
 ## Version history
+### Version 0.2.0
+24 April 2016
+
+* Add `rotation-matrix`
+
 ### Version 0.1.0
 * Initial release
 

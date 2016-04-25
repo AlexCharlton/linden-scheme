@@ -111,7 +111,7 @@ Returns the value of the state variable `VAR`. This is only useful when called w
 Sets the value of the state variable `VAR` to `VALUE`. This is only useful when called within a rule.
 
 ### Turtle graphics
-linden-scheme provides a set of functions (often also render rules) that implement the standard turtle-graphics commands typically associated with graphical L-systems. These commands are intended to be a standard foundation for turtle graphics, but do not provide any graphical output mechanism themselves. Rather, they provide a convenient parameter for holding some sort of rendering target, as well as a set of procedures that are used to modify and access the usual geometric qualities: namely translation/rotation matrices and thickness. Two state variables are therefore defined for the turtle graphics system: `transform-matrix` and `thickness`, although facilities are provided so they do not need to be accessed through `get-state` or `set-state`.
+linden-scheme provides a set of functions (often also render rules) that implement the standard turtle-graphics commands typically associated with graphical L-systems. These commands are intended to be a standard foundation for turtle graphics, but do not provide any graphical output mechanism themselves. Rather, they provide a convenient parameter for holding some sort of rendering target, as well as a set of procedures that are used to modify and access the usual geometric qualities: namely translation/rotation matrices and thickness. Two state variables are therefore defined for the turtle graphics system: `transform-matrix`, `rotation-matrix`, and `thickness`, although facilities are provided so they do not need to be accessed through `get-state` or `set-state`.
 
     [parameter] render-target
 
@@ -120,6 +120,10 @@ Used to hold whatever the render rules are rendering to. Is set by `render-l-sys
     [procedure] (transform-matrix)
 
 Returns the current transformation matrix, as modified by calls to `pitch`, `roll`, `turn`, `move`, and `move-forward`.
+
+    [procedure] (rotation-matrix)
+
+Returns the rotation component of the current transformation matrix, as modified by calls to `pitch`, `roll`, and `turn`.
 
     [procedure] (pitch ANGLE)
 

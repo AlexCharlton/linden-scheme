@@ -8,10 +8,17 @@
 (import chicken scheme)
 (use linden-scheme hypergiant)
 
+
+(define brown-values '(0.3 0.1 0.1))
+(define brown (apply make-rgb-color brown-values))
 (define cylinder
-  (let ((mesh (cylinder-mesh 1 1 1 12 index-type: #:uint)))
-    (lambda (length radius transform)
-      (cons mesh (m* transform (3d-scaling radius length radius))))))
+  (let ((mesh (cylinder-mesh 1 1 1 12
+                             index-type: #:uint
+                             color: (lambda (_) brown-values)
+                             normals?: #t)))
+    (lambda (length radius transform rotation-matrix)
+      (list mesh (m* transform (3d-scaling radius length radius))
+            rotation-matrix))))
 
 
 ;;; The l-system
@@ -52,7 +59,7 @@
 
 (define-render-rule (stem length)
   (render-target
-   (cons (cylinder length (thickness) (transform-matrix))
+   (cons (cylinder length (thickness) (transform-matrix) (rotation-matrix))
          (render-target)))
   (move-forward length))
 
@@ -83,21 +90,49 @@
   (zoom-camera! (camera) (/ (zoom) 10)))
 
 (define a-tree (make-parameter #f))
-(define brown (make-rgb-color 0.3 0.1 0.1))
+(define shiny-material (make-material 0.5 0.5 0.5 10))
+
+(define-pipeline phong-pipeline
+  ((#:vertex input: ((position #:vec3) (normal #:vec3) (color #:vec3))
+             uniform: ((mvp #:mat4) (model #:mat4))
+             output: ((p #:vec3) (n #:vec3) (c #:vec3)))
+   (define (main) #:void
+     (set! gl:position (* mvp (vec4 position 1.0)))
+     (set! p (vec3 (* model (vec4 position 1))))
+     (set! c color)
+     (set! n normal)))
+  ((#:fragment input: ((n #:vec3) (p #:vec3) (c #:vec3))
+               use: (phong-lighting)
+               uniform: ((camera-position #:vec3)
+                         (inverse-transpose-model #:mat4)
+                         (ambient #:vec3)
+                         (n-lights #:int)
+                         (light-positions (#:array #:vec3 8))
+                         (light-colors (#:array #:vec3 8))
+                         (light-intensities (#:array #:float 8))
+                         (material #:vec4))
+               output: ((frag-color #:vec4)))
+   (define (main) #:void
+     (set! frag-color (light (vec4 c 1.0) p
+                             (normalize (* (mat3 inverse-transpose-model) n)))))))
+
 
 (define (init)
   (push-key-bindings keys)
   (gl:clear-color 0.9 0.9 1.0 1)
   (scene (make-scene))
+  (activate-extension (scene) (lighting))
+  (set-ambient-light! (scene) (make-rgb-color 0.1 0.1 0.1))
   (camera (make-camera #:perspective #:orbit (scene)))
   (camera-look-at! (camera) (make-point 0 0 0))
   (set-camera-zoom! (camera) 4)
-  (a-tree (mesh-transform-append 'position
-                                 (render-l-system (step-l-system-times 13 (tree))
+  (add-light (scene) white 1000000
+             position: (make-point 10 10 0))
+  (a-tree (mesh-transform-append (render-l-system (step-l-system-times 13 (tree))
                                                   '())))
-  (add-node (scene) mesh-pipeline-render-pipeline
+  (add-node (scene) phong-pipeline-render-pipeline
             mesh: (a-tree)
-            color: brown
+            material: shiny-material
             position: (make-point 0 -2 0)))
 
 (start 640 480 "A tree" resizable: #f init: init update: update)

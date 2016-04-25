@@ -21,6 +21,7 @@
     move-forward
     move
     render-target
+    rotation-matrix
     transform-matrix)
 
 (import chicken scheme)
@@ -347,11 +348,15 @@
 
 ;;; Turtle graphics
 (define-state 'transform-matrix (mat4-identity))
+(define-state 'rotation-matrix (mat4-identity))
 (define-state 'thickness 0.0)
 (define render-target (make-parameter #f))
 
 (define (transform-matrix)
   (get-state 'transform-matrix))
+
+(define (rotation-matrix)
+  (get-state 'rotation-matrix))
 
 (define (thickness #!optional x)
   (if x
@@ -370,12 +375,18 @@
 (define (pitch angle)
   (set-state 'transform-matrix
              (m* (get-state 'transform-matrix)
+                 (x-rotation (degrees->radians angle))))
+  (set-state 'rotation-matrix
+             (m* (get-state 'rotation-matrix)
                  (x-rotation (degrees->radians angle)))))
 
 (define-render-rule (pitch angle)
   (pitch angle))
 
 (define (roll angle)
+  (set-state 'rotation-matrix
+             (m* (get-state 'rotation-matrix)
+                 (y-rotation (degrees->radians angle))))
   (set-state 'transform-matrix
              (m* (get-state 'transform-matrix)
                  (y-rotation (degrees->radians angle)))))
@@ -384,6 +395,9 @@
   (roll angle))
 
 (define (turn angle)
+  (set-state 'rotation-matrix
+             (m* (get-state 'rotation-matrix)
+                 (z-rotation (degrees->radians angle))))
   (set-state 'transform-matrix
              (m* (get-state 'transform-matrix)
                  (z-rotation (degrees->radians angle)))))
